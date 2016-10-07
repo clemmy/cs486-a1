@@ -19,9 +19,7 @@ function main() {
   });
   var result = generate('hans', ['NNP', 'VBD', 'DT', 'NN'], file);
 
-  // console.log(result);
-  console.log(counter);
-  console.log(highest);
+  console.log(result);
 }
 
 function buildPairsTable(graph) {
@@ -53,10 +51,12 @@ function buildPairsTable(graph) {
 function generate(startingWord, sentenceSpec, graph) {
   sentenceSpecification = sentenceSpec;
   buildPairsTable(graph);
-  buildGraph(startingWord, graph);
+  bfs(startingWord, graph);
+
+  return `"${highest.sentence}" with probability ${highest.probability}\nTotal nodes considered: ${counter}`;
 }
 
-function buildGraph(startingWord, graph) {
+function bfs(startingWord, graph) {
   var startNode = {
     word: startingWord,
     type: sentenceSpecification[0],
@@ -86,10 +86,7 @@ function buildGraph(startingWord, graph) {
           continue;
         }
 
-        var seq = node.sequence.concat({
-          word: edge.word,
-          type: edge.edgeType
-        });
+        var seq = addWordToSequence(node.sequence, edge.word, edge.edgeType);
 
         if (mayFormValidSentence(seq) && (node.probability * edge.probability > highest.probability)) {
           queue.push({
@@ -106,18 +103,11 @@ function buildGraph(startingWord, graph) {
   }
 }
 
-// function createNodeFromPair(pair) {
-//   return {
-//
-//   };
-// }
-
-function addWordToSequence(s, word, partOfSpeech, probability) {
-
-}
-
-function duplicateSequence(s) {
-
+function addWordToSequence(s, word, partOfSpeech) {
+  return s.concat({
+    word: word,
+    type: partOfSpeech
+  });
 }
 
 function isValidSentence(s) {
