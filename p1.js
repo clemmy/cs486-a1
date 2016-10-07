@@ -17,8 +17,7 @@ function main() {
   var file = fs.readFileSync('./input.txt', {
     encoding: 'utf-8'
   });
-  // var result = generate('hans', ['NNP','VBD','DT','NN'], 'DEPTH_FIRST', file);
-  var result = generate('a', ['DT','NN','VBD','NNP','IN','DT','NN'], 'DEPTH_FIRST', file);
+  var result = generate('hans', ['NNP','VBD','DT','NN'], file);
 
   console.log(result);
 }
@@ -49,15 +48,15 @@ function buildPairsTable(graph) {
     });
 }
 
-function generate(startingWord, sentenceSpec, searchStrategy, graph) {
+function generate(startingWord, sentenceSpec, graph) {
   sentenceSpecification = sentenceSpec;
   buildPairsTable(graph);
-  traverse(startingWord, graph, searchStrategy);
+  bfs(startingWord, graph);
 
   return `"${highest.sentence}" with probability ${highest.probability}\nTotal nodes considered: ${counter}`;
 }
 
-function traverse(startingWord, graph, searchStrategy) {
+function bfs(startingWord, graph) {
   var startNode = {
     word: startingWord,
     type: sentenceSpecification[0],
@@ -72,12 +71,7 @@ function traverse(startingWord, graph, searchStrategy) {
   queue.push(startNode);
 
   while (queue.length) {
-    var node;
-    if (searchStrategy === 'DEPTH_FIRST') {
-      node = queue.pop();
-    } else if (searchStrategy === 'BREADTH_FIRST') {
-      node = queue.shift(); // dequeue
-    }
+    var node = queue.shift(); // dequeue
     var pair = pairs[node.word];
     ++counter;
 
