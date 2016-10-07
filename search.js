@@ -32,16 +32,17 @@ function buildPairsTable(graph) {
 
       if (pairs[tokens[0]]) {
         pairs[tokens[0]].edges.push({
+          firstType: tokens[1],
           word: tokens[3],
-          type: tokens[4],
+          edgeType: tokens[4],
           probability: tokens[6]
         });
       } else {
         pairs[tokens[0]] = {
-          type: tokens[1],
           edges: [{
+            firstType: tokens[1],
             word: tokens[3],
-            type: tokens[4],
+            edgeType: tokens[4],
             probability: tokens[6]
           }]
         };
@@ -58,10 +59,10 @@ function generate(startingWord, sentenceSpec, graph) {
 function buildGraph(startingWord, graph) {
   var startNode = {
     word: startingWord,
-    type: pairs[startingWord].type,
+    type: sentenceSpecification[0],
     sequence: [{
       word: startingWord,
-      type: pairs[startingWord].type
+      type: sentenceSpecification[0]
     }],
     probability: 1.0,
     edges: []
@@ -81,15 +82,19 @@ function buildGraph(startingWord, graph) {
 
     if (pair) {
       for (var edge of pair.edges) {
+        if (edge.firstType !== node.sequence[node.sequence.length - 1].type) { // skip if first of pair is not of same type as last word in sequence
+          continue;
+        }
+
         var seq = node.sequence.concat({
           word: edge.word,
-          type: edge.type
+          type: edge.edgeType
         });
 
         if (mayFormValidSentence(seq) && (node.probability * edge.probability > highest.probability)) {
           queue.push({
             word: edge.word,
-            type: edge.type,
+            type: edge.edgeType,
             sequence: seq,
             probability: node.probability * edge.probability
           })
