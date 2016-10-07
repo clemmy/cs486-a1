@@ -86,7 +86,7 @@ function buildGraph(startingWord, graph) {
           type: edge.type
         });
 
-        if (mayFormValidSentence(seq)) {
+        if (mayFormValidSentence(seq) && (node.probability * edge.probability > highest.probability)) {
           queue.push({
             word: edge.word,
             type: edge.type,
