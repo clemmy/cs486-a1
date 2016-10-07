@@ -17,9 +17,41 @@ function main() {
   var file = fs.readFileSync('./input.txt', {
     encoding: 'utf-8'
   });
-  // var result = generate('hans', ['NNP','VBD','DT','NN'], 'DEPTH_FIRST', file);
-  var result = generate('a', ['DT','NN','VBD','NNP','IN','DT','NN'], 'DEPTH_FIRST', file);
 
+  var result = generate('benjamin', ['NNP','VBD','DT','NN'], 'BREADTH_FIRST', file);
+  console.log(result);
+
+  result = generate('a', ['DT','NN','VBD','NNP'], 'BREADTH_FIRST', file);
+  console.log(result);
+
+  result = generate('benjamin', ['NNP','VBD','DT','JJS','NN'], 'BREADTH_FIRST', file);
+  console.log(result);
+
+  result = generate('a', ['DT','NN','VBD','NNP','IN','DT','NN'], 'BREADTH_FIRST', file);
+  console.log(result);
+
+  var result = generate('benjamin', ['NNP','VBD','DT','NN'], 'DEPTH_FIRST', file);
+  console.log(result);
+
+  result = generate('a', ['DT','NN','VBD','NNP'], 'DEPTH_FIRST', file);
+  console.log(result);
+
+  result = generate('benjamin', ['NNP','VBD','DT','JJS','NN'], 'DEPTH_FIRST', file);
+  console.log(result);
+
+  result = generate('a', ['DT','NN','VBD','NNP','IN','DT','NN'], 'DEPTH_FIRST', file);
+  console.log(result);
+
+  var result = generate('benjamin', ['NNP','VBD','DT','NN'], 'HEURISTIC', file);
+  console.log(result);
+
+  result = generate('a', ['DT','NN','VBD','NNP'], 'HEURISTIC', file);
+  console.log(result);
+
+  result = generate('benjamin', ['NNP','VBD','DT','JJS','NN'], 'HEURISTIC', file);
+  console.log(result);
+
+  result = generate('a', ['DT','NN','VBD','NNP','IN','DT','NN'], 'HEURISTIC', file);
   console.log(result);
 }
 
@@ -54,7 +86,11 @@ function generate(startingWord, sentenceSpec, searchStrategy, graph) {
   buildPairsTable(graph);
   traverse(startingWord, graph, searchStrategy);
 
-  return `"${highest.sentence}" with probability ${highest.probability}\nTotal nodes considered: ${counter}`;
+  var result = `"${highest.sentence}" with probability ${highest.probability}\nTotal nodes considered: ${counter}`;
+
+  reset();
+
+  return result;
 }
 
 function traverse(startingWord, graph, searchStrategy) {
@@ -73,7 +109,7 @@ function traverse(startingWord, graph, searchStrategy) {
 
   while (queue.length) {
     var node;
-    if (searchStrategy === 'DEPTH_FIRST') {
+    if (searchStrategy === 'DEPTH_FIRST' || searchStrategy === 'HEURISTIC') {
       node = queue.pop();
     } else if (searchStrategy === 'BREADTH_FIRST') {
       node = queue.shift(); // dequeue
@@ -87,22 +123,57 @@ function traverse(startingWord, graph, searchStrategy) {
     }
 
     if (pair) {
-      for (var edge of pair.edges) {
-        if (edge.firstType !== node.sequence[node.sequence.length - 1].type) { // skip if first of pair is not of same type as last word in sequence
-          continue;
+      if (searchStrategy === 'HEURISTIC') {
+        var scores = pair.edges.map((edge) => {
+          var seq = addWordToSequence(node.sequence, edge.word, edge.edgeType);
+
+          if (edge.firstType === node.sequence[node.sequence.length - 1].type && mayFormValidSentence(seq) && (node.probability * edge.probability > highest.probability)) {
+            return {
+              edge: {
+                word: edge.word,
+                type: edge.edgeType,
+                sequence: seq,
+                probability: node.probability * edge.probability
+              },
+              score: edge.probability
+            };
+          } else {
+            return null;
+          }
+        })
+        .filter(score => !!score)
+        .sort((a, b) => { // sort in decreasing order
+          if (a.score < b.score) {
+            return 1;
+          }
+          if (a.score > b.score) {
+            return -1;
+          }
+          return 0;
+        });
+
+        for (var score of scores) {
+          queue.push(score.edge); // push highest score into stack first
         }
+      } else {
+        for (var edge of pair.edges) {
+          if (edge.firstType !== node.sequence[node.sequence.length - 1].type) { // skip if first of pair is not of same type as last word in sequence
+            continue;
+          }
 
-        var seq = addWordToSequence(node.sequence, edge.word, edge.edgeType);
+          var seq = addWordToSequence(node.sequence, edge.word, edge.edgeType);
 
-        if (mayFormValidSentence(seq) && (node.probability * edge.probability > highest.probability)) {
-          queue.push({
-            word: edge.word,
-            type: edge.edgeType,
-            sequence: seq,
-            probability: node.probability * edge.probability
-          })
+          if (mayFormValidSentence(seq) && (node.probability * edge.probability > highest.probability)) {
+            queue.push({
+              word: edge.word,
+              type: edge.edgeType,
+              sequence: seq,
+              probability: node.probability * edge.probability
+            })
+          }
         }
       }
+
     } else {
       // last word
     }
@@ -146,4 +217,16 @@ function mayFormValidSentence(s) {
   }
 
   return true;
+}
+
+function reset() {
+  pairs = {};
+  queue = []; // stores nodes to visit
+  visited = {};
+  sentenceSpecification;
+  counter = 0;
+  highest = {
+    sentence: '',
+    probability: 0
+  };
 }
