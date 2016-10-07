@@ -2,6 +2,14 @@ var fs = require('fs');
 
 // global structures
 var pairs = {};
+var queue = []; // stores nodes to visit
+var visited = {};
+var sentenceSpecification;
+var counter = 0;
+var highest = {
+  sentence: '',
+  probability: 0
+};
 
 main();
 
@@ -12,6 +20,8 @@ function main() {
   var result = generate('hans', ['NNP', 'VBD', 'DT', 'NN'], file);
 
   // console.log(result);
+  console.log(counter);
+  console.log(highest);
 }
 
 function buildPairsTable(graph) {
@@ -23,7 +33,7 @@ function buildPairsTable(graph) {
       if (pairs[tokens[0]]) {
         pairs[tokens[0]].edges.push({
           word: tokens[3],
-          wordType: tokens[4],
+          type: tokens[4],
           probability: tokens[6]
         });
       } else {
@@ -31,7 +41,7 @@ function buildPairsTable(graph) {
           type: tokens[1],
           edges: [{
             word: tokens[3],
-            wordType: tokens[4],
+            type: tokens[4],
             probability: tokens[6]
           }]
         };
@@ -40,38 +50,62 @@ function buildPairsTable(graph) {
 }
 
 function generate(startingWord, sentenceSpec, graph) {
+  sentenceSpecification = sentenceSpec;
   buildPairsTable(graph);
   buildGraph(startingWord, graph);
 }
 
 function buildGraph(startingWord, graph) {
-  console.log(pairs);
   var startNode = {
-    sequence: [startingWord],
     word: startingWord,
+    type: pairs[startingWord].type,
+    sequence: [{
+      word: startingWord,
+      type: pairs[startingWord].type
+    }],
     probability: 1.0,
-    visited: false,
     edges: []
   };
 
-  build(startNode, graph, startingWord);
+  queue.push(startNode);
+
+  while (queue.length) {
+    var node = queue.shift(); // dequeue
+    var pair = pairs[node.word];
+    ++counter;
+
+    if (isValidSentence(node.sequence) && node.probability > highest.probability) {
+      highest.sentence = node.sequence.map((token) => token.word).join(' ');
+      highest.probability = node.probability;
+    }
+
+    if (pair) {
+      for (var edge of pair.edges) {
+        var seq = node.sequence.concat({
+          word: edge.word,
+          type: edge.type
+        });
+
+        if (mayFormValidSentence(seq)) {
+          queue.push({
+            word: edge.word,
+            type: edge.type,
+            sequence: seq,
+            probability: node.probability * edge.probability
+          })
+        }
+      }
+    } else {
+      // last word
+    }
+  }
 }
 
-function build(node, graph, word) {
-  // var filtered = lines.filter(function(line) {
-  //   return line.startsWith(word+'/');
-  // });
-  // stick this into a global maybe
-
-  // for () { // word in lines
-  //   node.edges.push({
-  //
-  //   });
-  // }
-
-
-  // console.log(filtered);
-}
+// function createNodeFromPair(pair) {
+//   return {
+//
+//   };
+// }
 
 function addWordToSequence(s, word, partOfSpeech, probability) {
 
@@ -82,11 +116,33 @@ function duplicateSequence(s) {
 }
 
 function isValidSentence(s) {
+  if (s.length !== sentenceSpecification.length) {
+    return false;
+  }
 
+  var spec = s.map(token => token.type);
+
+  for (var i=0; i<sentenceSpecification.length; ++i) {
+    if (spec[i] !== sentenceSpecification[i]) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
-function mayFormValidSentence(s, sentenceSpec) {
+function mayFormValidSentence(s) {
+  if (s.length > sentenceSpecification.length) {
+    return false;
+  }
 
+  var spec = s.map(token => token.type);
+
+  for (var i=0; i<s.length; ++i) {
+    if (spec[i] !== sentenceSpecification[i]) {
+      return false;
+    }
+  }
+
+  return true;
 }
-
-// what should Sequence structure look like?
